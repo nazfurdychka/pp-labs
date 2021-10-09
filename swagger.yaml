@@ -1,0 +1,487 @@
+openapi: 3.0.0
+- url: http://127.0.0.0:5000/api/v11
+info:
+  version: "1.0.0"
+  title: Лабораторна робота №5. Варіант 11
+  description: >-
+    Варіант 11. Створити сервіс для проведення онлайн занять. Повинні бути користувачі двох рівнів – викладачі та учні. Викладачі можуть створювати, видаляти, редагувати курс, переглядати перелік створених курсів, долучати студентів до курсу. До курсу може бути долучено не більше 5 студентів. Студенти можуть переглядати всі дані лише тих курсів, до яких вони долучені. Також студенти можуть надсилати на участь у якомусь курсі, а викладач має можливість прийняти або відхилити запит.
+
+tags:
+- name: user
+  description: Operations with users
+- name: course
+  description: Operations with courses
+- name: request
+  description: Operations with requests
+- name: auth
+  description: Authenticating operations
+
+security:
+  - basicAuth: []
+
+paths:
+  /user/{username}:
+    get:
+      tags:
+      - user
+      summary: Get user
+      description: Get information about user
+      operationId: getUserByUsername
+      parameters:
+      - name: username
+        in: path
+        description: 'The name that needs to be fetched'
+        required: true
+        schema:
+          type: string
+          example: "username"
+       
+      responses:
+        200:
+          description: "Successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        401:
+          $ref: '#/components/responses/InvalidCredentialsError'
+
+      
+    put:
+      tags:
+      - user
+      summary: Update user
+      description: Update your user
+      operationId: updateUserByUsername
+      
+      parameters: 
+      - name: username
+        in: path
+        required: true
+        description: "The name that needs to be fetched"
+        schema:
+          type: string
+          
+      requestBody:
+        description: Updated user object
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+        required: true
+        
+      responses:
+        200:
+          description: "Successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        401:
+          $ref: '#/components/responses/InvalidCredentialsError'
+
+    
+    delete:
+      tags: 
+        - user
+      summary: Delete user
+      description: Delete user by username
+      operationId: deleteUser
+      
+      parameters: 
+      - name: username
+        in: path
+        required: true
+        description: "The name that needs to be fetched"
+        schema:
+          type: string
+    
+      responses:
+        200:
+          description: "Successful operation. User was deleted"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        404:
+          description: User is not found.
+      
+  
+  /acceptRequest/{requestId}:
+    put:
+      tags:
+      - user
+      summary: Accept request (only for lectors)
+      operationId: acceptRequest
+      
+      parameters:
+      - name: requestId
+        in: path
+        required: true
+        description: "RequestID to be accepted"
+        schema:
+          type: string
+    
+      responses:
+        200:
+          description: "Successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        404:
+          description: Request is not found.
+        406:
+          description: Can't accept this request because the limit of students will be exceeded
+  
+  /declineRequest/{requestId}:
+    put:
+      tags:
+      - user
+      summary: Decline request (only for lectors)
+      operationId: declineRequest
+      
+      parameters:
+      - name: requestId
+        in: path
+        required: true
+        description: "RequestID to be declined"
+        schema:
+          type: string
+    
+      responses:
+        200:
+          description: "Successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        404:
+          description: Request is not found.
+      
+  
+  /course:
+    post:
+      tags:
+      - course
+      summary: Create a course
+      operationId: createCourse
+      
+      requestBody:
+        description: Course object
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Course'
+        required: true
+    
+      responses:
+        200:
+          description: "Successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        400:
+          $ref: '#/components/responses/IncorrectStructureError'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        406:
+          description: Can't create course with given amount of students
+  
+  
+  /courses:
+    get:
+      tags:
+      - course
+      summary: Get all courses
+      operationId: getCourses
+      
+      responses:
+        200:
+          description: "Successful operation"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Course'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        404:
+          description: Course is not found.
+  
+  
+  /course/{coursename}:
+    get:
+      tags:
+      - course
+      summary: Get a course by coursename
+      operationId: getCourseByName
+      
+      parameters:
+      - name: coursename
+        in: path
+        required: true
+        description: "The coursename that needs to be fetched"
+        schema:
+          type: string
+    
+      responses:
+        200:
+          description: "Successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        404:
+          description: Course is not found.
+    
+    
+    put:
+      tags:
+      - course
+      summary: Update a course by coursename
+      operationId: updateCourseByName
+      
+      parameters:
+      - name: coursename
+        in: path
+        required: true
+        description: "The coursename that needs to be fetched"
+        schema:
+          type: string
+          
+      requestBody:
+        description: Updated course object
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Course'
+        required: true
+    
+      responses:
+        200:
+          description: "Successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        404:
+          description: Course is not found.
+        406:
+          description: Can't update course with given amount of students
+
+
+    delete:
+      tags:
+      - course
+      summary: Delete course by coursename
+      operationId: deleteCourseByName
+      
+      parameters:
+      - name: coursename
+        in: path
+        required: true
+        description: "The coursename that needs to be fetched"
+        schema:
+          type: string
+    
+      responses:
+        200:
+          description: "Successful operation. Course was deleted"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+        404:
+          description: Course is not found.
+        
+  
+  /request:
+    post:
+      tags:
+      - request
+      summary: Create request to join the course
+      operationId: createRequest
+      
+      requestBody:
+        description: Request to create
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Request'
+        required: true
+      
+      responses:
+        200:
+          description: "Successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Request'
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+      
+  
+  /auth/register:
+    post:
+      tags:
+      - auth
+      summary: Register new user
+      operationId: registerUser
+      
+      requestBody:
+        description: User with data to be registered
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+        required: true
+        
+      responses:
+        200:
+          description: "successful operation. User is registered"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        400:
+          description: "User with such username already exists"
+      
+      security: []
+      
+      
+  /auth/login:
+    post:
+      tags:
+      - auth
+      summary: Logs in user with provided credentials
+      operationId: loginUser
+      
+      parameters:
+      - name: username
+        in: query
+        description: The username
+        required: true
+        schema:
+          type: string
+      - name: password
+        in: query
+        description: The user's password (plain text)
+        required: true
+        schema:
+          type: string
+          
+      responses:
+        200:
+          description: "successful operation. JWT Token is returned"
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+        401:
+          $ref: '#/components/responses/InvalidCredentialsError'
+    
+      security: []
+      
+        
+  /auth/logout:
+    post:
+      tags:
+      - auth
+      summary: Logs current user out of session
+      operationId: logoutUser
+      
+      responses:
+        200:
+          description: "successful operation"
+        401:
+          $ref: '#/components/responses/UnauthorizedError'
+      
+
+components:
+  schemas: 
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        phone:
+          type: string
+        userType:
+          type: string
+          enum: [Lector, Student]
+    
+    Course:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        courseName:
+          type: string
+        courseDescription:
+          type: string
+        courseLector:
+          type: string
+        courseMembers:
+          type: array
+          items: 
+            $ref: '#/components/schemas/User'
+      
+    Request:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        requestFrom:
+          type: integer
+          format: int64
+        requestToCourse:
+          type: integer
+          format: int64
+        requestToLector:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum: [OnHold, Accepted, Declined]
+    
+  responses:
+    UnauthorizedError:
+      description: "JWT token was not provided or it is invalid"
+    InvalidCredentialsError:
+      description: "Provided credentials are invalid"
+    IncorrectStructureError:
+      description: "Incorrect structure of request body"
+          
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
