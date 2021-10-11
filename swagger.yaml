@@ -387,12 +387,7 @@ paths:
           
       responses:
         200:
-          description: "successful operation. JWT Token is returned"
-          content:
-            application/json:
-              schema:
-                type: string
-                example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+          description: "successful operation"
         401:
           $ref: '#/components/responses/InvalidCredentialsError'
     
@@ -475,7 +470,11 @@ components:
     
   responses:
     UnauthorizedError:
-      description: "JWT token was not provided or it is invalid"
+      description: "Authentication information is missing or invalid"
+      headers:
+        WWW_Authenticate:
+          schema:
+            type: string
     InvalidCredentialsError:
       description: "Provided credentials are invalid"
     IncorrectStructureError:
