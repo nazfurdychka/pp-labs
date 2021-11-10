@@ -3,7 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy import create_engine
 
-engine = create_engine("mysql+mysqlconnector://root:5101@localhost/onlinecourses", echo=True)
+engine = create_engine("mysql+mysqlconnector://root:root@localhost/api_db", echo=True)
 
 Base = declarative_base()
 
@@ -12,11 +12,11 @@ class User(Base):
     __tablename__ = 'user'
 
     id = Column(Integer, primary_key=True)
-    username = Column(String(45), nullable=False)
+    username = Column(String(45), nullable=False, unique=True)
     firstName = Column(String(45), nullable=False)
     lastName = Column(String(45), nullable=False)
     email = Column(String(100), nullable=False)
-    password = Column(String(20), nullable=False)
+    password = Column(String(100), nullable=False)
     phone = Column(String(45), nullable=True)
     userType = Column(Enum("Student", "Lector"), nullable=False)
 
@@ -43,29 +43,17 @@ class Request(Base):
     __tablename__ = 'request'
 
     id = Column(Integer, primary_key=True)
+    studentId = Column(Integer, ForeignKey("user.id"), nullable=False)
     requestToCourse = Column(Integer, ForeignKey("course.id"), nullable=False)
     requestToLector = Column(Integer, ForeignKey("user.id"), nullable=False)
-    status = Column(Enum("OnHold", "Accepted", "Declined"), nullable=False)
+    status = Column(Enum("OnHold", "Accepted", "Declined"), nullable=False, default="OnHold")
 
-    User = relationship("User")
-    Course = relationship("Course")
-
-    def __repr__(self):
-        return f"{self.id}, {self.requestToCourse}, {self.requestToLector}, {self.status}"
-
-
-class StudentRequest(Base):
-    __tablename__ = 'studentRequest'
-
-    id = Column(Integer, primary_key=True)
-    requestId = Column(Integer, ForeignKey("request.id"), nullable=False)
-    userId = Column(Integer, ForeignKey("user.id"), nullable=False)
-
-    User = relationship("User")
-    Request = relationship("Request")
+    User = relationship("User", foreign_keys=[studentId])
+    User_lector = relationship("User", foreign_keys=[requestToLector])
+    Course = relationship("Course", foreign_keys=[requestToCourse])
 
     def __repr__(self):
-        return f"{self.id}, {self.requestId}, {self.userId}"
+        return f"{self.id},{self.studentId} ,{self.requestToCourse}, {self.requestToLector}, {self.status}"
 
 
 class CourseMember(Base):
@@ -80,6 +68,3 @@ class CourseMember(Base):
 
     def __repr__(self):
         return f"{self.id}, {self.courseId}, {self.userId}"
-
-
-# Base.metadata.create_all(engine)
