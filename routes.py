@@ -156,7 +156,7 @@ def add_request():
         data = schema.load(new_request)
     except ValidationError as err:
         return err.messages, 422
-    s.add(new_request)
+    s.add(data)
     s.commit()
     return schema.dump(data), 200
 

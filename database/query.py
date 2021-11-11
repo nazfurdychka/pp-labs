@@ -39,5 +39,5 @@ s = session()
 # users = User.query.all()
 # for user in users:
 #     print(user)
-res = s.query(CourseMember).filter(CourseMember.courseId == 2).count()
+res = s.query(CourseMember.id).filter(CourseMember.courseId == 2).first()
 print(res)
