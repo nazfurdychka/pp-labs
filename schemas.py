@@ -34,7 +34,7 @@ class RequestSchema(Schema):
     studentId = fields.Integer(required=True)
     requestToCourse = fields.Integer(required=True)
     requestToLector = fields.Integer(required=True)
-    status = fields.Str(validate=validate.OneOf(["OnHold", "Accepted", "Declined"]), required=True)
+    status = fields.Str(validate=validate.OneOf(["OnHold", "Accepted", "Declined"]), required=False)
 
     @post_load
     def make_request(self, data, **kwargs):
