@@ -29,6 +29,12 @@ def update_user(username):
     params = request.json
     if not params:
         return {"message": "No input data provided"}, 400
+    check_email = s.query(User).filter(User.email == request.json.get('email')).first()
+    check_username = s.query(User).filter(User.username == request.json.get('username')).first()
+    if check_email is not None and request.json.get('email') != user.email:
+        return {"message": "User with provided email already exists"}, 406
+    if check_username is not None and request.json.get('username') != username:
+        return {"message": "User with provided username already exists"}, 406
     schema = UserSchema()
     try:
         data = schema.load(params)
@@ -47,6 +53,7 @@ def delete_user(username):
     user = s.query(User).filter(User.username == username).first()
     if user is None:
         return {"message": "User could not be found."}, 404
+    s.query(CourseMember).filter(CourseMember.userId == getattr(user, 'id')).delete(synchronize_session="fetch")
     s.delete(user)
     s.commit()
     schema = UserSchema()
@@ -61,11 +68,12 @@ def accept_request(request_id):
         return {"message": "Request could not be found."}, 404
     if s.query(CourseMember).filter(CourseMember.courseId == getattr(req, 'requestToCourse')).count() < 5:
         setattr(req, 'status', 'Accepted')
+        s.query(Request).filter(Request.id == request_id).delete(synchronize_session="fetch")
         new_course_member = CourseMember(courseId=getattr(req, 'requestToCourse'), userId=getattr(req, 'studentId'))
         s.add(new_course_member)
         s.commit()
     else:
-        return {"message": "Request could not be accepted."}, 406
+        return {"message": "Request can't be accepted because the limit of students will be exceeded."}, 406
     return {"message": "Accepted"}, 200
 
 
@@ -90,6 +98,11 @@ def add_course():
         data = schema.load(new_course)
     except ValidationError as err:
         return err.messages, 422
+    user_lector = s.query(User).filter(User.id == request.json.get('courseLector')).first()
+    if user_lector is None:
+        return {"message": "User could not be found."}, 404
+    if user_lector.userType != 'Lector':
+        return {"message": "This user is not lector."}, 406
     s.add(data)
     s.commit()
     return schema.dump(data), 200
@@ -127,6 +140,11 @@ def update_course(course_name):
         data = schema.load(params)
     except ValidationError as err:
         return err.messages, 422
+    user = s.query(User).filter(User.id == request.json.get('courseLector')).first()
+    if user is None:
+        return {"message": "User could not be found."}, 404
+    if user.userType != 'Lector':
+        return {"message": "This user is not lector."}, 406
     for key, value in params.items():
         setattr(course, key, value)
     s.commit()
@@ -156,6 +174,19 @@ def add_request():
         data = schema.load(new_request)
     except ValidationError as err:
         return err.messages, 422
+    user_lector = s.query(User).filter(User.id == request.json.get('requestToLector')).first()
+    if user_lector is None:
+        return {"message": "Lector could not be found."}, 404
+    if user_lector.userType != 'Lector':
+        return {"message": "This user is not a lector."}, 406
+    user_student = s.query(User).filter(User.id == request.json.get('studentId')).first()
+    if user_student is None:
+        return {"message": "Student could not be found."}, 404
+    if user_student.userType != 'Student':
+        return {"message": "This user is not a student."}, 406
+    course = s.query(Course).filter(Course.id == request.json.get('requestToCourse')).first()
+    if course is None:
+        return {"message": "Course could not be found."}, 404
     s.add(data)
     s.commit()
     return schema.dump(data), 200
@@ -163,9 +194,6 @@ def add_request():
 
 @query.route('/auth/register', methods=['POST'])
 def add_user():
-    user = s.query(User).filter(User.email == request.json.get('email')).first()
-    if user is not None:
-        return {"message": "User with provided email already exists"}, 400
     new_user = request.json
     if not new_user:
         return {"message": "No input data provided"}, 400
@@ -174,6 +202,12 @@ def add_user():
         schema.load(new_user)
     except ValidationError as err:
         return err.messages, 422
+    user_check_email = s.query(User).filter(User.email == request.json.get('email')).first()
+    user_check_username = s.query(User).filter(User.username == request.json.get('username')).first()
+    if user_check_email is not None:
+        return {"message": "User with provided email already exists"}, 406
+    if user_check_username is not None:
+        return {"message": "User with provided username already exists"}, 406
     user_to_create = User(**new_user)
     hashed = bcrypt.hashpw(user_to_create.password.encode('utf-8'), bcrypt.gensalt())
     user_to_create.password = hashed
