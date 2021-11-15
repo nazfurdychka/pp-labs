@@ -29,17 +29,17 @@ def update_user(username):
     params = request.json
     if not params:
         return {"message": "No input data provided"}, 400
+    schema = UserSchema()
+    try:
+        data = schema.load(params)
+    except ValidationError as err:
+        return err.messages, 422
     check_email = s.query(User).filter(User.email == request.json.get('email')).first()
     check_username = s.query(User).filter(User.username == request.json.get('username')).first()
     if check_email is not None and request.json.get('email') != user.email:
         return {"message": "User with provided email already exists"}, 406
     if check_username is not None and request.json.get('username') != username:
         return {"message": "User with provided username already exists"}, 406
-    schema = UserSchema()
-    try:
-        data = schema.load(params)
-    except ValidationError as err:
-        return err.messages, 422
     for key, value in params.items():
         setattr(user, key, value)
     hashed = bcrypt.hashpw(user.password.encode('utf-8'), bcrypt.gensalt())
@@ -53,7 +53,9 @@ def delete_user(username):
     user = s.query(User).filter(User.username == username).first()
     if user is None:
         return {"message": "User could not be found."}, 404
-    s.query(CourseMember).filter(CourseMember.userId == getattr(user, 'id')).delete(synchronize_session="fetch")
+    s.query(CourseMember).filter(CourseMember.userId == user.id).delete(synchronize_session="fetch")
+    s.query(Request).filter(Request.requestToLector == user.id).delete(synchronize_session="fetch")
+    s.query(Request).filter(Request.studentId == user.id).delete(synchronize_session="fetch")
     s.delete(user)
     s.commit()
     schema = UserSchema()
@@ -108,9 +110,9 @@ def add_course():
     return schema.dump(data), 200
 
 
-@query.route('/course/<string:course_name>', methods=['GET'])
-def get_course(course_name):
-    course = s.query(Course).filter(Course.courseName == course_name).first()
+@query.route('/course/<int:course_id>', methods=['GET'])
+def get_course(course_id):
+    course = s.query(Course).filter(Course.id == course_id).first()
     if course is None:
         return {"message": "Course could not be found."}, 404
     schema = CourseSchema()
@@ -118,7 +120,7 @@ def get_course(course_name):
 
 
 # get courses for user with provided id
-@query.route('/course/<int:user_id>', methods=['GET'])
+@query.route('/user/course/<int:user_id>', methods=['GET'])
 def get_course_by_userid(user_id):
     courses = s.query(Course).join(CourseMember).filter(CourseMember.userId == user_id).all()
     if not courses:
@@ -127,9 +129,9 @@ def get_course_by_userid(user_id):
     return jsonify(schema.dump(courses, many=True)), 200
 
 
-@query.route('/course/<string:course_name>', methods=['PUT'])
-def update_course(course_name):
-    course = s.query(Course).filter(Course.courseName == course_name).first()
+@query.route('/course/<int:course_id>', methods=['PUT'])
+def update_course(course_id):
+    course = s.query(Course).filter(Course.id == course_id).first()
     if course is None:
         return {"message": "Course could not be found."}, 404
     params = request.json
@@ -151,12 +153,13 @@ def update_course(course_name):
     return schema.dump(data), 200
 
 
-@query.route('/course/<string:course_name>', methods=['DELETE'])
-def delete_course(course_name):
-    course = s.query(Course).filter(Course.courseName == course_name).first()
+@query.route('/course/<int:course_id>', methods=['DELETE'])
+def delete_course(course_id):
+    course = s.query(Course).filter(Course.id == course_id).first()
     if course is None:
         return {"message": "Course could not be found."}, 404
     s.query(CourseMember).filter(CourseMember.courseId == course.id).delete(synchronize_session="fetch")
+    s.query(Request).filter(Request.requestToCourse == course.id).delete(synchronize_session="fetch")
     s.delete(course)
     s.commit()
     schema = CourseSchema()
@@ -187,6 +190,8 @@ def add_request():
     course = s.query(Course).filter(Course.id == request.json.get('requestToCourse')).first()
     if course is None:
         return {"message": "Course could not be found."}, 404
+    if course.courseLector != user_lector.id:
+        return {"message": "Provided lector is not allowed to accept this request."}, 406
     s.add(data)
     s.commit()
     return schema.dump(data), 200

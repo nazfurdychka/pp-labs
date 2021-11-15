@@ -1,6 +1,6 @@
 openapi: 3.0.0
 servers:
-- url: http://127.0.0.0:5000/api/v11
+- url: http://127.0.0.1:5000
 info:
   version: "1.0.0"
   title: Лабораторна робота №5. Варіант 11
@@ -36,7 +36,7 @@ paths:
         schema:
           type: string
           example: "username"
-       
+
       responses:
         200:
           description: "Successful operation"
@@ -47,22 +47,22 @@ paths:
         401:
           $ref: '#/components/responses/InvalidCredentialsError'
 
-      
+
     put:
       tags:
       - user
       summary: Update user
       description: Update your user
       operationId: updateUserByUsername
-      
-      parameters: 
+
+      parameters:
       - name: username
         in: path
         required: true
         description: "The name that needs to be fetched"
         schema:
           type: string
-          
+
       requestBody:
         description: Updated user object
         content:
@@ -70,7 +70,7 @@ paths:
             schema:
               $ref: '#/components/schemas/User'
         required: true
-        
+
       responses:
         200:
           description: "Successful operation"
@@ -81,22 +81,22 @@ paths:
         401:
           $ref: '#/components/responses/InvalidCredentialsError'
 
-    
+
     delete:
-      tags: 
+      tags:
         - user
       summary: Delete user
       description: Delete user by username
       operationId: deleteUser
-      
-      parameters: 
+
+      parameters:
       - name: username
         in: path
         required: true
         description: "The name that needs to be fetched"
         schema:
           type: string
-    
+
       responses:
         200:
           description: "Successful operation. User was deleted"
@@ -108,8 +108,8 @@ paths:
           $ref: '#/components/responses/UnauthorizedError'
         404:
           description: User is not found.
-      
-  
+
+
   /user/acceptRequest/{requestId}:
     put:
       tags:
@@ -197,7 +197,7 @@ paths:
           description: Can't create course with given amount of students
 
 
-  /courses/{username}:
+  /user/courses/{userId}:
     get:
       tags:
       - course
@@ -205,12 +205,12 @@ paths:
       operationId: getCourses
 
       parameters:
-      - name: username
+      - name: userId
         in: path
         required: true
-        description: "The name that needs to be fetched"
+        description: "The id that needs to be fetched"
         schema:
-          type: string
+          type: integer
 
       responses:
         200:
@@ -227,20 +227,20 @@ paths:
           description: Courses are not found.
 
 
-  /course/{coursename}:
+  /course/{courseId}:
     get:
       tags:
       - course
-      summary: Get a course by coursename
-      operationId: getCourseByName
+      summary: Get a course by courseId
+      operationId: getCourseById
 
       parameters:
-      - name: coursename
+      - name: courseId
         in: path
         required: true
-        description: "The coursename that needs to be fetched"
+        description: "The courseId that needs to be fetched"
         schema:
-          type: string
+          type: integer
 
       responses:
         200:
@@ -258,16 +258,16 @@ paths:
     put:
       tags:
       - course
-      summary: Update a course by coursename
-      operationId: updateCourseByName
+      summary: Update a course by courseId
+      operationId: updateCourseBycourseId
 
       parameters:
-      - name: coursename
+      - name: courseId
         in: path
         required: true
         description: "The coursename that needs to be fetched"
         schema:
-          type: string
+          type: integer
 
       requestBody:
         description: Updated course object
@@ -295,16 +295,16 @@ paths:
     delete:
       tags:
       - course
-      summary: Delete course by coursename
-      operationId: deleteCourseByName
+      summary: Delete course by courseId
+      operationId: deleteCourseBycourseId
 
       parameters:
-      - name: coursename
+      - name: courseId
         in: path
         required: true
         description: "The coursename that needs to be fetched"
         schema:
-          type: string
+          type: integer
 
       responses:
         200:
@@ -453,11 +453,6 @@ components:
           type: string
         courseLector:
           type: string
-        courseMembers:
-          type: array
-          items:
-            $ref: '#/components/schemas/User'
-          maxItems: 5
       
     Request:
       type: object
