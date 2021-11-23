@@ -3,7 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy import create_engine
 
-engine = create_engine("mysql+mysqlconnector://root:root@localhost/api_db", echo=True)
+engine = create_engine("mysql+pymysql://root:password@localhost:3306/online_courses", echo=True)
 
 Base = declarative_base()
 
@@ -16,7 +16,7 @@ class User(Base):
     firstName = Column(String(45), nullable=False)
     lastName = Column(String(45), nullable=False)
     email = Column(String(100), nullable=False)
-    password = Column(String(100), nullable=False)
+    password = Column(String(2000), nullable=False)
     phone = Column(String(45), nullable=True)
     userType = Column(Enum("Student", "Lector"), nullable=False)
 
