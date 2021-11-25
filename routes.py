@@ -240,6 +240,8 @@ def add_request():
         data = schema.load(new_request)
     except ValidationError as err:
         return err.messages, 422
+    if new_request['studentId'] != auth.current_user().id:
+        return {"message": "Forbidden"}, 403
     user_lector = s.query(User).filter(User.id == request.json.get('requestToLector')).first()
     if user_lector is None:
         return {"message": "Lector could not be found."}, 404
@@ -251,8 +253,13 @@ def add_request():
     if user_student.userType != 'Student':
         return {"message": "This user is not a student."}, 406
     course = s.query(Course).filter(Course.id == request.json.get('requestToCourse')).first()
+    request_to_join = s.query(Request).filter(Request.id == request.json.get('requestToCourse')).all()
+    if len(request_to_join) == 1:
+        return {"message": "Request was already sent."}, 406
     if course is None:
         return {"message": "Course could not be found."}, 404
+    if course.courseLector != user_lector.id:
+        return {"message": "Provided lector is not allowed to accept this request."}, 406
     if course.courseLector != user_lector.id:
         return {"message": "Provided lector is not allowed to accept this request."}, 406
     s.add(data)
