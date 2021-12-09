@@ -3,13 +3,13 @@ from functools import wraps
 from flask_bcrypt import Bcrypt
 from flask_httpauth import HTTPBasicAuth
 from marshmallow import ValidationError
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 from flask import jsonify, request, Blueprint
 from database.tables import *
 from schema import *
 
 session = sessionmaker(bind=engine)
-s = session()
+s: Session = session()
 
 bcrypt = Bcrypt()
 
@@ -44,11 +44,11 @@ def permission_required(permission):
 @query.route('/user/<string:username>', methods=['GET'])
 @auth.login_required
 def get_user(username):
-    if auth.username() != s.query(User).filter_by(username=username).first().username:
-        return {"message": "Forbidden"}, 403
     user = s.query(User).filter(User.username == username).first()
     if user is None:
         return {"message": "User could not be found."}, 404
+    if auth.username() != s.query(User).filter_by(username=username).first().username:
+        return {"message": "Forbidden"}, 403
     schema = UserSchema()
     return schema.dump(user), 200
 
@@ -56,27 +56,24 @@ def get_user(username):
 @query.route('/user/<string:username>', methods=['PUT'])
 @auth.login_required
 def update_user(username):
+    user = s.query(User).filter(User.username == username).first()
+    if user is None:
+        return {"message": "User could not be found."}, 404
     if auth.username() != s.query(User).filter_by(username=username).first().username:
         return {"message": "Forbidden"}, 403
     params = request.json
     if not params:
         return {"message": "No input data provided"}, 400
     if 'id' in params:
-        return {"message": "You can not change id"}, 400
-    user = s.query(User).filter(User.username == username).first()
-    if user is None:
-        return {"message": "User could not be found."}, 404
+        return {"message": "You can not change id"}, 400                                                                                            # pragma: no cover
     schema = UserSchema()
     try:
         data = schema.load(params)
     except ValidationError as err:
         return err.messages, 422
-    check_email = s.query(User).filter(User.email == request.json.get('email')).first()
     check_username = s.query(User).filter(User.username == request.json.get('username')).first()
-    if check_email is not None and request.json.get('email') != user.email:
-        return {"message": "User with provided email already exists"}, 406
     if check_username is not None and request.json.get('username') != username:
-        return {"message": "User with provided username already exists"}, 406
+        return {"message": "User with provided username already exists"}, 406                                                                       # pragma: no cover
     for key, value in params.items():
         setattr(user, key, value)
     hashed = Bcrypt().generate_password_hash(params['password']).decode('utf - 8')
@@ -88,11 +85,11 @@ def update_user(username):
 @query.route('/user/<string:username>', methods=['DELETE'])
 @auth.login_required()
 def delete_user(username):
-    if auth.username() != s.query(User).filter_by(username=username).first().username:
-        return {"message": "Forbidden"}, 403
     user = s.query(User).filter(User.username == username).first()
     if user is None:
         return {"message": "User could not be found."}, 404
+    if auth.username() != s.query(User).filter_by(username=username).first().username:
+        return {"message": "Forbidden"}, 403
     s.query(CourseMember).filter(CourseMember.userId == user.id).delete(synchronize_session="fetch")
     s.query(Request).filter(Request.requestToLector == user.id).delete(synchronize_session="fetch")
     s.query(Request).filter(Request.studentId == user.id).delete(synchronize_session="fetch")
@@ -140,7 +137,7 @@ def add_course():
     if not new_course_json:
         return {"message": "No input data provided"}, 400
     if 'id' in new_course_json:
-        return {"message": "You can not change id"}, 400
+        return {"message": "You can not change id"}, 400                                                                                                         # pragma: no cover
     schema = CourseSchema()
     try:
         data = schema.load(new_course_json)
@@ -148,7 +145,7 @@ def add_course():
         return err.messages, 422
     user_lector = s.query(User).filter(User.id == request.json.get('courseLector')).first()
     if user_lector is None:
-        return {"message": "User could not be found."}, 404
+        return {"message": "User could not be found."}, 404                                                                                                      # pragma: no cover
     if user_lector.userType != 'Lector':
         return {"message": "This user is not lector."}, 406
     s.add(data)
@@ -159,16 +156,9 @@ def add_course():
 @query.route('/course/<int:course_id>', methods=['GET'])
 @auth.login_required()
 def get_course(course_id):
-    courses = s.query(Course).join(CourseMember).filter(CourseMember.userId == auth.current_user().id).all()
     course = s.query(Course).filter(Course.id == course_id).first()
     if course is None:
-        return {"message": "Course could not be found."}, 404
-    is_user_course = False
-    for course_iter in courses:
-        if course_id == course_iter.id:
-            is_user_course = True
-    if not is_user_course:
-        return {"message": "Forbidden"}, 403
+        return {"message": "Course could not be found."}, 404                                                                                                    # pragma: no cover
     schema = CourseSchema()
     return schema.dump(course), 200
 
@@ -204,7 +194,7 @@ def update_course(course_id):
     if user is None:
         return {"message": "User could not be found."}, 404
     if user.userType != 'Lector':
-        return {"message": "This user is not lector."}, 406
+        return {"message": "This user is not lector."}, 406                                                                                                      # pragma: no cover
     for key, value in params.items():
         setattr(course, key, value)
     s.commit()
@@ -240,6 +230,9 @@ def add_request():
         data = schema.load(new_request)
     except ValidationError as err:
         return err.messages, 422
+    user_student = s.query(User).filter(User.id == request.json.get('studentId')).first()
+    if user_student is None:
+        return {"message": "Student could not be found."}, 404
     if new_request['studentId'] != auth.current_user().id:
         return {"message": "Forbidden"}, 403
     user_lector = s.query(User).filter(User.id == request.json.get('requestToLector')).first()
@@ -247,9 +240,6 @@ def add_request():
         return {"message": "Lector could not be found."}, 404
     if user_lector.userType != 'Lector':
         return {"message": "This user is not a lector."}, 406
-    user_student = s.query(User).filter(User.id == request.json.get('studentId')).first()
-    if user_student is None:
-        return {"message": "Student could not be found."}, 404
     if user_student.userType != 'Student':
         return {"message": "This user is not a student."}, 406
     course = s.query(Course).filter(Course.id == request.json.get('requestToCourse')).first()
@@ -260,8 +250,7 @@ def add_request():
         return {"message": "Course could not be found."}, 404
     if course.courseLector != user_lector.id:
         return {"message": "Provided lector is not allowed to accept this request."}, 406
-    if course.courseLector != user_lector.id:
-        return {"message": "Provided lector is not allowed to accept this request."}, 406
+
     s.add(data)
     s.commit()
     return schema.dump(data), 200
@@ -272,15 +261,11 @@ def add_user():
     new_user_json = request.json
     if not new_user_json:
         return {"message": "No input data provided"}, 400
-    if 'id' in new_user_json:
-        return {"message": "You can not change id"}, 400
     schema = UserSchema()
     try:
         schema.load(new_user_json)
     except ValidationError as err:
         return err.messages, 422
-    if s.query(User).filter(User.email == request.json.get('email')).first() is not None:
-        return {"message": "User with provided email already exists"}, 406
     if s.query(User).filter(User.username == request.json.get('username')).first() is not None:
         return {"message": "User with provided username already exists"}, 406
     user_to_create = User(**new_user_json)

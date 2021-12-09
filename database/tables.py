@@ -20,7 +20,7 @@ class User(Base):
     phone = Column(String(45), nullable=True)
     userType = Column(Enum("Student", "Lector"), nullable=False)
 
-    def __repr__(self):
+    def __repr__(self):                                                                                                                         # pragma: no cover
         return f"{self.id}, {self.username}, {self.firstName}, {self.lastName}, {self.email}, " \
                f"{self.password}, {self.phone}, {self.userType}"
 
@@ -35,7 +35,7 @@ class Course(Base):
 
     User = relationship("User")
 
-    def __repr__(self):
+    def __repr__(self):                                                                                                                         # pragma: no cover
         return f"{self.id}, {self.courseName}, {self.courseDescription}, {self.courseLector}"
 
 
@@ -52,7 +52,7 @@ class Request(Base):
     User_lector = relationship("User", foreign_keys=[requestToLector])
     Course = relationship("Course", foreign_keys=[requestToCourse])
 
-    def __repr__(self):
+    def __repr__(self):                                                                                                                         # pragma: no cover
         return f"{self.id},{self.studentId} ,{self.requestToCourse}, {self.requestToLector}, {self.status}"
 
 
@@ -66,5 +66,5 @@ class CourseMember(Base):
     User = relationship("User")
     Course = relationship("Course")
 
-    def __repr__(self):
+    def __repr__(self):                                                                                                                         # pragma: no cover
         return f"{self.id}, {self.courseId}, {self.userId}"
