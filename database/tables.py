@@ -15,14 +15,12 @@ class User(Base):
     username = Column(String(45), nullable=False, unique=True)
     firstName = Column(String(45), nullable=False)
     lastName = Column(String(45), nullable=False)
-    email = Column(String(100), nullable=False)
     password = Column(String(2000), nullable=False)
-    phone = Column(String(45), nullable=True)
     userType = Column(Enum("Student", "Lector"), nullable=False)
 
     def __repr__(self):                                                                                                                         # pragma: no cover
         return f"{self.id}, {self.username}, {self.firstName}, {self.lastName}, {self.email}, " \
-               f"{self.password}, {self.phone}, {self.userType}"
+               f"{self.password}, {self.userType}"
 
 
 class Course(Base):

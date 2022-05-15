@@ -8,9 +8,7 @@ class UserSchema(Schema):
     username = fields.Str(validate=validate.Length(max=45), required=True)
     firstName = fields.Str(validate=validate.Length(max=45), required=True)
     lastName = fields.Str(validate=validate.Length(max=45), required=True)
-    email = fields.Email(validate=validate.Length(max=100), required=True)
     password = fields.Str(validate=validate.Length(max=100), required=True, load_only=True)
-    phone = fields.Str(validate=validate.Length(max=45), required=False)
     userType = fields.Str(validate=validate.OneOf(["Student", "Lector"]), required=True)
 
     @post_load
